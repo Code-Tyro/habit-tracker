@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>习惯打卡</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f6f1ea; color: #3d3529; min-height: 100vh;
+    display: flex; justify-content: center; padding: 24px 16px 80px;
+  }
+  .app { max-width: 540px; width: 100%; }
+  .header { background: #fff; border-radius: 16px; padding: 24px 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 16px; }
+  .header-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .header-date { font-size: 17px; color: #8c8274; }
+  .header-progress-text { font-size: 22px; font-weight: 700; color: #3d3529; }
+  .header-progress-bar { height: 6px; background: #ece6de; border-radius: 3px; overflow: hidden; margin-top: 8px; }
+  .header-progress-bar-inner { height: 100%; background: #81b29a; border-radius: 3px; transition: width 0.4s ease; width: 0%; }
+  .header-quote { font-size: 16px; color: #b8aea0; margin-top: 12px; line-height: 1.5; font-weight: 500; }
+  .add-section { background: #fff; border-radius: 16px; padding: 16px 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 16px; }
+  .add-form { display: flex; gap: 10px; align-items: center; }
+  .add-input { flex: 1; border: 2px solid #ece6de; border-radius: 10px; padding: 10px 14px; font-size: 15px; outline: none; transition: border-color 0.2s; background: #faf8f5; color: #3d3529; }
+  .add-input:focus { border-color: #d4a373; background: #fff; }
+  .add-input::placeholder { color: #b8aea0; }
+  .add-btn { background: #d4a373; color: #fff; border: none; border-radius: 10px; width: 42px; height: 42px; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; flex-shrink: 0; }
+  .add-btn:hover { background: #c4915f; }
+  .add-btn:active { transform: scale(0.95); }
+  .empty-state { text-align: center; padding: 60px 20px; color: #b8aea0; font-size: 15px; line-height: 1.8; }
+  .empty-state-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+  .habit-card { background: #fff; border-radius: 16px; padding: 16px 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 12px; transition: transform 0.15s, box-shadow 0.15s; }
+  .habit-card:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+  .habit-card.today-done { border-left: 4px solid #81b29a; background: #f7faf7; }
+  .habit-card.today-done .habit-name { text-decoration: line-through; color: #bfb5a8; }
+  .habit-card-top { display: flex; align-items: center; gap: 12px; }
+  .habit-name { font-size: 15px; font-weight: 600; flex: 1; transition: color 0.2s; }
+  .habit-streak { font-size: 13px; color: #8c8274; white-space: nowrap; }
+  .habit-streak .fire { color: #e76f51; }
+  .habit-streak strong { color: #3d3529; font-weight: 700; }
+  .check-box { width: 28px; height: 28px; border: 2.5px solid #d4c9bc; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; background: #faf8f5; flex-shrink: 0; font-size: 16px; color: transparent; user-select: none; }
+  .check-box:hover { border-color: #d4a373; background: #f5ede4; }
+  .check-box.checked { background: #81b29a; border-color: #81b29a; color: #fff; }
+  .check-box.checked:hover { background: #6ea084; border-color: #6ea084; }
+  .habit-actions { display: flex; gap: 4px; }
+  .habit-btn { background: none; border: none; cursor: pointer; font-size: 14px; color: #b8aea0; padding: 4px 6px; border-radius: 6px; transition: all 0.15s; }
+  .habit-btn:hover { background: #f0ebe4; color: #3d3529; }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 100; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px); }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 20px; width: 100%; max-width: 380px; max-height: 90vh; overflow-y: auto; padding: 24px 20px 20px; box-shadow: 0 8px 40px rgba(0,0,0,0.12); animation: modalIn 0.25s ease; }
+  @keyframes modalIn { from { opacity: 0; transform: scale(0.94) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .modal-title { font-size: 16px; font-weight: 600; }
+  .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: #b8aea0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: all 0.15s; }
+  .modal-close:hover { background: #f0ebe4; color: #3d3529; }
+  .modal-month-nav { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 12px 0 16px; }
+  .modal-month-nav span { font-size: 17px; font-weight: 600; min-width: 110px; text-align: center; }
+  .modal-month-nav button { background: #f0ebe4; border: none; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; color: #3d3529; }
+  .modal-month-nav button:hover { background: #d4c9bc; }
+  .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; margin-bottom: 16px; }
+  .calendar-weekday { font-size: 12px; color: #b8aea0; padding: 6px 0; font-weight: 500; }
+  .calendar-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 14px; border-radius: 8px; transition: all 0.15s; color: #3d3529; }
+  .calendar-day.future { color: #d4c9bc; }
+  .calendar-day.empty { visibility: hidden; }
+  .calendar-day.completed { background: #e4efe4; color: #5a8f5a; font-weight: 600; }
+  .calendar-day.today { border: 2px solid #d4a373; font-weight: 700; }
+  .calendar-day.today.completed { border-color: #81b29a; background: #d4e8d4; color: #3d7a3d; }
+  .modal-stats { background: #faf8f5; border-radius: 12px; padding: 14px 16px; display: flex; justify-content: space-around; text-align: center; }
+  .modal-stat-value { font-size: 18px; font-weight: 700; color: #3d3529; }
+  .modal-stat-label { font-size: 12px; color: #8c8274; margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-top">
+      <span style="font-size:22px;">☀️</span>
+      <span class="header-date" id="todayDate"></span>
+    </div>
+    <div class="header-progress-text">已完成 <span id="doneCount">0</span> / <span id="totalCount">0</span></div>
+    <div class="header-progress-bar"><div class="header-progress-bar-inner" id="progressBar"></div></div>
+    <div class="header-quote" id="todayQuote"></div>
+  </div>
+  <div class="add-section">
+    <div class="add-form">
+      <input class="add-input" id="habitInput" placeholder="新习惯名称…" maxlength="30" autocomplete="off">
+      <button class="add-btn" id="addBtn" title="添加习惯">+</button>
+    </div>
+  </div>
+  <div id="habitList"></div>
+</div>
+<div class="modal-overlay" id="calendarOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">📅 日历</span>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <div class="modal-month-nav">
+      <button id="prevMonth">◀</button>
+      <span id="monthLabel">2026年 7月</span>
+      <button id="nextMonth">▶</button>
+    </div>
+    <div class="calendar-grid" id="calendarGrid">
+      <div class="calendar-weekday">一</div><div class="calendar-weekday">二</div><div class="calendar-weekday">三</div>
+      <div class="calendar-weekday">四</div><div class="calendar-weekday">五</div><div class="calendar-weekday">六</div><div class="calendar-weekday">日</div>
+    </div>
+    <div class="modal-stats">
+      <div class="modal-stat-item"><div class="modal-stat-value" id="statStreak">0</div><div class="modal-stat-label">连续打卡</div></div>
+      <div class="modal-stat-item"><div class="modal-stat-value" id="statMonth">0/0</div><div class="modal-stat-label">本月完成</div></div>
+      <div class="modal-stat-item"><div class="modal-stat-value" id="statTotal">0</div><div class="modal-stat-label">总完成天数</div></div>
+    </div>
+  </div>
+</div>
+<script>
+(function() {
+  'use strict';
+  var STORAGE_KEY = 'habit_tracker_data';
+  function getData() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) { var data = JSON.parse(raw); if (data && Array.isArray(data.habits) && data.records) return data; }
+    } catch(_) {}
+    return { habits: [], records: {} };
+  }
+  function saveData(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+  function genId() { return Date.now().toString(36) + Math.random().toString(36).substring(2, 8); }
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function formatDate(date) { return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()); }
+  function getTodayStr() { return formatDate(new Date()); }
+  var weekDays = ['日','一','二','三','四','五','六'];
+  function getWeekDayChinese(date) { return weekDays[date.getDay()]; }
+  var TD = document.getElementById('todayDate'), DC = document.getElementById('doneCount');
+  var TC = document.getElementById('totalCount'), PB = document.getElementById('progressBar');
+  var HL = document.getElementById('habitList'), HI = document.getElementById('habitInput');
+  var AB = document.getElementById('addBtn'), OV = document.getElementById('calendarOverlay');
+  var MC = document.getElementById('modalClose'), MT = document.getElementById('modalTitle');
+  var ML = document.getElementById('monthLabel'), PM = document.getElementById('prevMonth');
+  var NM = document.getElementById('nextMonth'), CG = document.getElementById('calendarGrid');
+  var SS = document.getElementById('statStreak'), SM = document.getElementById('statMonth');
+  var ST = document.getElementById('statTotal'), TQ = document.getElementById('todayQuote');
+  var calHabitId = null, calYear = 0, calMonth = 0;
+
+  var quotes = ['每天进步一点点','坚持就是胜利','自律给我自由','行动是成功的开始','一切皆有可能','成为更好的自己','好习惯造就好人生'];
+  function setDailyQuote() {
+    var t = new Date();
+    var start = new Date(t.getFullYear(), 0, 0);
+    var day = Math.floor((t - start) / 86400000);
+    TQ.textContent = quotes[day % quotes.length];
+  }
+
+  function calcStreak(id, records) {
+    var t = new Date(), ts = formatDate(t), hr = records[id] || {};
+    var sd = new Date(t);
+    if (!hr[ts]) { sd.setDate(sd.getDate() - 1); if (!hr[formatDate(sd)]) return 0; }
+    var s = 0, cur = new Date(sd);
+    while (true) { if (hr[formatDate(cur)]) { s++; cur.setDate(cur.getDate() - 1); } else break; }
+    return s;
+  }
+
+  function calcMonthStats(id, records, y, m) {
+    var hr = records[id] || {}, c = 0, dim = new Date(y, m + 1, 0).getDate();
+    for (var d = 1; d <= dim; d++) { if (hr[y + '-' + pad(m + 1) + '-' + pad(d)]) c++; }
+    return { completed: c, total: dim };
+  }
+
+  function calcTotalDays(id, records) { var hr = records[id] || {}; return Object.keys(hr).filter(function(k){return hr[k]}).length; }
+  function escapeHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  function toggleCheckIn(id) {
+    var data = getData(), ts = getTodayStr();
+    if (!data.records[id]) data.records[id] = {};
+    data.records[id][ts] = !data.records[id][ts];
+    saveData(data); render();
+  }
+
+  function addHabit() {
+    var name = HI.value.trim(); if (!name) return;
+    var data = getData();
+    for (var i = 0; i < data.habits.length; i++) {
+      if (data.habits[i].name === name) {
+        alert('「' + name + '」已经存在了');
+        HI.value = ''; HI.focus(); return;
+      }
+    }
+    data.habits.push({ id: genId(), name: name, createdAt: getTodayStr() });
+    saveData(data); HI.value = ''; HI.focus(); render();
+  }
+
+  function deleteHabit(id) {
+    var data = getData(), habit = null;
+    for (var i = 0; i < data.habits.length; i++) { if (data.habits[i].id === id) { habit = data.habits[i]; break; } }
+    if (!habit) return;
+    if (!confirm('确定要删除习惯「' + habit.name + '」吗？\n所有打卡记录也会被删除。')) return;
+    data.habits = data.habits.filter(function(h) { return h.id !== id; });
+    delete data.records[id]; saveData(data); render();
+  }
+
+  function openCalendar(id) {
+    var data = getData(), habit = null;
+    for (var i = 0; i < data.habits.length; i++) { if (data.habits[i].id === id) { habit = data.habits[i]; break; } }
+    if (!habit) return;
+    calHabitId = id; var n = new Date(); calYear = n.getFullYear(); calMonth = n.getMonth();
+    MT.textContent = '📅 ' + habit.name; OV.classList.add('open'); renderCalendar();
+  }
+
+  function closeCalendar() { OV.classList.remove('open'); calHabitId = null; }
+
+  function renderCalendar() {
+    if (!calHabitId) return;
+    var data = getData(), hr = data.records[calHabitId] || {}, ts = getTodayStr();
+    ML.textContent = calYear + '年 ' + (calMonth + 1) + '月';
+    CG.querySelectorAll('.calendar-day').forEach(function(el) { el.remove(); });
+    var fd = new Date(calYear, calMonth, 1).getDay(), so = fd === 0 ? 6 : fd - 1;
+    var dim = new Date(calYear, calMonth + 1, 0).getDate(), today = new Date();
+    for (var i = 0; i < so; i++) { var e = document.createElement('div'); e.className = 'calendar-day empty'; CG.appendChild(e); }
+    for (var d = 1; d <= dim; d++) {
+      var ds = calYear + '-' + pad(calMonth + 1) + '-' + pad(d), c = document.createElement('div');
+      c.className = 'calendar-day'; c.textContent = d;
+      if (new Date(calYear, calMonth, d) > today) c.classList.add('future');
+      if (hr[ds]) c.classList.add('completed');
+      if (ds === ts) c.classList.add('today');
+      CG.appendChild(c);
+    }
+    SS.textContent = calcStreak(calHabitId, data.records);
+    var ms = calcMonthStats(calHabitId, data.records, calYear, calMonth);
+    SM.textContent = ms.completed + '/' + ms.total;
+    ST.textContent = calcTotalDays(calHabitId, data.records);
+  }
+
+  function render() {
+    var data = getData(), ts = getTodayStr(), t = new Date();
+    setDailyQuote();
+    TD.textContent = t.getFullYear() + '年' + (t.getMonth() + 1) + '月' + t.getDate() + '日 周' + getWeekDayChinese(t);
+    var habits = data.habits, total = habits.length, done = 0;
+    if (total === 0) {
+      HL.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div>还没有习惯呢<br>在上方添加你的第一个习惯吧</div>';
+      DC.textContent = '0'; TC.textContent = '0'; PB.style.width = '0%'; return;
+    }
+    var html = '';
+    for (var i = 0; i < habits.length; i++) {
+      var habit = habits[i], checked = data.records[habit.id] && data.records[habit.id][ts];
+      if (checked) done++;
+      var streak = calcStreak(habit.id, data.records);
+      var sd = streak > 0 ? '<span class="fire">🔥</span> 连续 <strong>' + streak + '</strong> 天' : '';
+      html += '<div class="habit-card' + (checked ? ' today-done todo-done' : '') + '" data-id="' + habit.id + '">'
+        + '<div class="habit-card-top">'
+        + '<div class="check-box' + (checked ? ' checked' : '') + '" data-id="' + habit.id + '">' + (checked ? '✓' : '') + '</div>'
+        + '<div class="habit-name">' + escapeHtml(habit.name) + '</div>'
+        + '<div class="habit-streak">' + sd + '</div>'
+        + '<div class="habit-actions">'
+        + '<button class="habit-btn" data-cal="' + habit.id + '">📅</button>'
+        + '<button class="habit-btn" data-del="' + habit.id + '">🗑</button>'
+        + '</div>'
+        + '</div>'
+        + '</div>';
+    }
+    HL.innerHTML = html;
+    DC.textContent = done; TC.textContent = total;
+    PB.style.width = (total > 0 ? Math.round(done / total * 100) : 0) + '%';
+    document.querySelectorAll('.check-box').forEach(function(el) { el.addEventListener('click', function(e) { e.stopPropagation(); if (this.dataset.id) toggleCheckIn(this.dataset.id); }); });
+    document.querySelectorAll('[data-cal]').forEach(function(el) { el.addEventListener('click', function(e) { e.stopPropagation(); if (this.dataset.cal) openCalendar(this.dataset.cal); }); });
+    document.querySelectorAll('[data-del]').forEach(function(el) { el.addEventListener('click', function(e) { e.stopPropagation(); if (this.dataset.del) deleteHabit(this.dataset.del); }); });
+  }
+
+  AB.addEventListener('click', addHabit);
+  HI.addEventListener('keydown', function(e) { if (e.key === 'Enter') addHabit(); });
+  MC.addEventListener('click', closeCalendar);
+  OV.addEventListener('click', function(e) { if (e.target === OV) closeCalendar(); });
+  PM.addEventListener('click', function() { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCalendar(); });
+  NM.addEventListener('click', function() { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderCalendar(); });
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && OV.classList.contains('open')) closeCalendar(); });
+  render();
+})();
+</script>
+</body>
+</html>
